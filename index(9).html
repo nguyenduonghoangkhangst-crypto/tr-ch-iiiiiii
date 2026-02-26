@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vườn Màu Kỳ Diệu</title>
+
+<style>
+body{
+    margin:0;
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:linear-gradient(to bottom,#ffe6fa,#c8f7ff);
+    font-family:'Comic Sans MS', cursive;
+    overflow:hidden;
+}
+
+#container{
+    width:95%;
+    max-width:750px;
+    background:white;
+    border-radius:25px;
+    padding:20px;
+    text-align:center;
+    box-shadow:0 10px 25px rgba(0,0,0,0.3);
+    position:relative;
+}
+
+h1{color:#ff4081;margin-top:0;}
+
+.button{
+    padding:12px 22px;
+    font-size:20px;
+    margin:8px;
+    border:none;
+    border-radius:20px;
+    background:#ffd54f;
+    cursor:pointer;
+}
+
+.big{font-size:55px;}
+
+.color-circle{
+    width:70px;
+    height:70px;
+    border-radius:50%;
+    display:inline-block;
+    margin:10px;
+    cursor:pointer;
+    border:3px solid #fff;
+}
+
+#rabbit{
+    position:absolute;
+    bottom:10px;
+    left:10px;
+    font-size:55px;
+    animation:bounce 1s infinite;
+}
+
+@keyframes bounce{
+    0%,100%{transform:translateY(0);}
+    50%{transform:translateY(-20px);}
+}
+
+#timer{
+    font-size:18px;
+    color:#ff0000;
+}
+</style>
+</head>
+
+<body>
+
+<div id="container">
+
+<h1>🌈 Vườn Màu Kỳ Diệu 🌈</h1>
+
+<div id="startScreen">
+<button class="button" onclick="startGame()">BẮT ĐẦU</button>
+</div>
+
+<div id="gameScreen" style="display:none;">
+<div>
+🎯 Điểm: <span id="score">0</span> |
+🔁 Lượt: <span id="round">0</span>/20 |
+⏳ Thời gian: <span id="timer">30</span>s |
+🏆 Cao nhất: <span id="highscore">0</span>
+</div>
+
+<div id="game"></div>
+<div id="message"></div>
+</div>
+
+<div id="rabbit">🐰</div>
+
+</div>
+
+<audio id="bgMusic" loop>
+<source src="https://actions.google.com/sounds/v1/music/music_box.ogg">
+</audio>
+
+<script>
+let score=0, round=0, maxRounds=20;
+let correctAnswer;
+let usedQuestions=new Set();
+let timerInterval;
+let timeLeft=30;
+
+let fruits=[
+{icon:"🍎",name:"táo"},
+{icon:"🍌",name:"chuối"},
+{icon:"🍇",name:"nho"},
+{icon:"🍊",name:"cam"},
+{icon:"🍓",name:"dâu"},
+{icon:"🍍",name:"dứa"}
+];
+
+let colors=[
+{code:"red",name:"đỏ"},
+{code:"blue",name:"xanh dương"},
+{code:"yellow",name:"vàng"},
+{code:"green",name:"xanh lá"},
+{code:"purple",name:"tím"},
+{code:"orange",name:"cam"},
+{code:"pink",name:"hồng"},
+{code:"brown",name:"nâu"}
+];
+
+let highscore=localStorage.getItem("highscore")||0;
+document.getElementById("highscore").innerText=highscore;
+
+function startGame(){
+document.getElementById("startScreen").style.display="none";
+document.getElementById("gameScreen").style.display="block";
+document.getElementById("bgMusic").volume=1.0;
+document.getElementById("bgMusic").play();
+nextRound();
+}
+
+function startTimer(){
+clearInterval(timerInterval);
+timeLeft=30;
+document.getElementById("timer").innerText=timeLeft;
+timerInterval=setInterval(()=>{
+timeLeft--;
+document.getElementById("timer").innerText=timeLeft;
+if(timeLeft<=0){
+clearInterval(timerInterval);
+document.getElementById("message").innerText="⏰ Hết giờ!";
+setTimeout(nextRound,1000);
+}
+},1000);
+}
+
+function updateInfo(){
+document.getElementById("score").innerText=score;
+document.getElementById("round").innerText=round;
+}
+
+function generateUnique(key){
+if(usedQuestions.has(key)) return false;
+usedQuestions.add(key);
+return true;
+}
+
+function fruitQuestion(){
+let fruit, number, key;
+do{
+fruit=fruits[Math.floor(Math.random()*fruits.length)];
+number=Math.floor(Math.random()*8)+1;
+key="fruit-"+fruit.name+"-"+number;
+}while(!generateUnique(key));
+
+correctAnswer=number;
+
+let display="";
+for(let i=0;i<number;i++) display+=fruit.icon+" ";
+
+let game=document.getElementById("game");
+game.innerHTML="<div class='big'>"+display+"</div>";
+game.innerHTML+="<p>Có bao nhiêu quả "+fruit.name+"?</p>";
+
+createNumberOptions(number);
+}
+
+function colorQuestion(){
+let color,key;
+do{
+color=colors[Math.floor(Math.random()*colors.length)];
+key="color-"+color.name;
+}while(!generateUnique(key));
+
+correctAnswer=color.code;
+
+let game=document.getElementById("game");
+game.innerHTML="<p>Hãy chọn màu "+color.name+"</p>";
+
+let shuffled=[...colors].sort(()=>Math.random()-0.5).slice(0,6);
+if(!shuffled.find(c=>c.code===color.code)){
+shuffled[0]=color;
+}
+
+shuffled.forEach(c=>{
+let div=document.createElement("div");
+div.className="color-circle";
+div.style.backgroundColor=c.code;
+div.onclick=()=>checkAnswer(c.code);
+game.appendChild(div);
+});
+}
+
+function createNumberOptions(correct){
+let options=[correct];
+while(options.length<3){
+let n=Math.floor(Math.random()*10)+1;
+if(!options.includes(n)) options.push(n);
+}
+options.sort(()=>Math.random()-0.5);
+
+options.forEach(n=>{
+let btn=document.createElement("button");
+btn.className="button";
+btn.innerText=n;
+btn.onclick=()=>checkAnswer(n);
+document.getElementById("game").appendChild(btn);
+});
+}
+
+function checkAnswer(ans){
+clearInterval(timerInterval);
+if(ans===correctAnswer){
+score++;
+document.getElementById("message").innerText="🎉 Chính xác!";
+}else{
+document.getElementById("message").innerText="😢 Sai rồi!";
+}
+setTimeout(nextRound,1000);
+}
+
+function nextRound(){
+document.getElementById("message").innerText="";
+round++;
+if(round>maxRounds){
+if(score>highscore){
+localStorage.setItem("highscore",score);
+}
+alert("Hoàn thành! Điểm: "+score);
+location.reload();
+return;
+}
+updateInfo();
+if(Math.random()<0.5) fruitQuestion();
+else colorQuestion();
+startTimer();
+}
+
+updateInfo();
+</script>
+
+</body>
+</html>
